@@ -266,6 +266,28 @@ select {
   color: var(--danger);
 }
 
+.secondary-action {
+  align-self: flex-start;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f4efe3;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.secondary-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 208, 117, 0.42);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.secondary-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

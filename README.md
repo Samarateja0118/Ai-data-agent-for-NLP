@@ -1,134 +1,38 @@
-# MCP Data Analyst Chat App
+# CSV Analyst Chat
 
-This project is a student-friendly React + JavaScript demo of an MCP-style analyst assistant.
+A React + JavaScript app that lets you upload a CSV, inspect its schema, preview the rows, and ask analyst-style questions about the data.
 
-## What this app demonstrates
+This project is designed as a portfolio-ready frontend for showing:
 
-- A React chat interface
-- Mock business metrics and dashboard data
-- Tool-style actions such as `database.query` and `dashboard.open`
-- Grounded answers based on structured data
-- A visible activity trace so users can see how the answer was produced
+- CSV upload and parsing in the browser
+- schema inference for numeric and text columns
+- lightweight dataset profiling
+- chart and table generation from uploaded data
+- a chat-like analysis flow with visible tool traces
 
-## Why this is a strong MCP portfolio project
+## What it does
 
-Real MCP apps are powerful because the model does not just "know" things. It uses tools.
+After uploading a CSV, the app can:
 
-In this demo, we simulate that idea by:
+- detect the delimiter automatically
+- infer numeric vs categorical columns
+- calculate missing values, averages, medians, mins, maxes, and totals
+- generate a trend chart from numeric columns
+- show category breakdowns for text columns
+- answer questions like:
+  - `Summarize this dataset`
+  - `Which columns are numeric?`
+  - `What is the average revenue?`
+  - `Show total sales by region`
 
-- reading from mock datasets
-- selecting a tool flow based on the user question
-- returning both a final answer and the list of tool actions used
+It also includes a built-in demo dataset so anyone visiting the project can try it without preparing a file first.
 
-That makes the UI feel much closer to a real tool-enabled assistant than a plain chatbot.
+## Tech stack
 
-## Project structure
-
-```text
-src/
-  App.jsx                 Main UI and state management
-  main.jsx                React entry point
-  styles.css              Styling and responsive layout
-  data/
-    mockData.js           Fake metrics, dashboards, and starter prompts
-  lib/
-    analysisEngine.js     Query-routing and tool-trace logic
-```
-
-## Important React ideas used here
-
-### 1. `useState`
-
-`useState` stores values that change over time and should update the UI.
-
-This app uses it for:
-
-- chat messages
-- input text
-- tool activity feed
-- selected dashboard
-- loading state
-
-### 2. `useEffect`
-
-`useEffect` runs side effects after React updates the screen.
-
-Here it is used to auto-scroll the chat whenever a new message or tool event appears.
-
-### 3. `useRef`
-
-`useRef` stores a mutable reference to a DOM element without causing rerenders.
-
-Here it points to the end of the chat feed so the app can scroll to it.
-
-### 4. Controlled inputs
-
-The text input is controlled by React state:
-
-- the input value comes from state
-- typing updates state with `onChange`
-
-This is a very common React pattern because it gives your component full control over form behavior.
-
-### 5. Conditional rendering
-
-The app shows different UI depending on state:
-
-- `Running tools...` vs `Ready`
-- empty tool panel vs live tool cards
-
-This is how React turns state into interface changes.
-
-## Important JavaScript ideas used here
-
-### 1. Array mapping
-
-We use `.map()` to render lists such as:
-
-- metric cards
-- starter prompt buttons
-- chat messages
-- tool activity cards
-- dashboard focus tags
-
-### 2. Array sorting
-
-We use `.sort()` on copied arrays to find:
-
-- the fastest-growing region
-- the best campaign by ROAS
-
-### 3. String matching
-
-The analysis engine uses `question.toLowerCase()` and `.includes()` to route the question to the right response handler.
-
-This is a simple rule-based approach and a good first step before adding real MCP calls or LLM routing.
-
-### 4. Async functions and `await`
-
-`runAnalystQuery()` is async. It waits between tool events to simulate a real agent using tools over time.
-
-This makes the interface feel alive and teaches an important frontend concept: asynchronous UI workflows.
-
-## How the app works
-
-1. The user submits a question.
-2. `App.jsx` adds the user message to chat state.
-3. `runAnalystQuery(question)` decides which analysis function to use.
-4. That function returns:
-   - a list of tool events
-   - a grounded response
-5. The UI displays the tool events.
-6. The assistant answer is appended to the chat.
-7. If a dashboard tool is opened, the dashboard panel updates too.
-
-## What to improve next
-
-- connect a real LLM API
-- connect a real database through an MCP server
-- add charts with a library like Recharts
-- add better natural-language intent detection
-- stream tool events and assistant output token by token
+- React
+- Vite
+- JavaScript
+- CSS
 
 ## Run locally
 
@@ -142,3 +46,94 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Project structure
+
+```text
+public/
+  demo-retail-data.csv       Built-in demo CSV
+
+src/
+  App.jsx                    Main UI and state management
+  main.jsx                   React entry point
+  styles.css                 Styling and responsive layout
+  lib/
+    csvUtils.js              CSV parsing, typing, and profiling utilities
+    analysisEngine.js        Question routing and dataset-aware answers
+```
+
+## Key implementation ideas
+
+### 1. CSV parsing without a heavy library
+
+The parser handles:
+
+- delimiter detection
+- quoted values
+- duplicate header cleanup
+- numeric parsing for values like currency and percentages
+
+This makes the project easier to study because the data pipeline is visible in the code.
+
+### 2. Schema inference
+
+Each column is profiled to determine whether it behaves like:
+
+- a numeric field
+- a categorical/text field
+
+For numeric columns, the app computes:
+
+- count
+- sum
+- mean
+- median
+- min
+- max
+
+### 3. Rule-based question routing
+
+The chat experience is currently rule-based rather than LLM-powered.
+
+That means the app matches user questions to:
+
+- summary requests
+- row/column counts
+- missing-value checks
+- numeric aggregations
+- grouped comparisons
+
+This is a strong learning step before connecting a real AI backend.
+
+### 4. SVG chart rendering
+
+The trend chart is generated with inline SVG from parsed numeric data, which makes it easier to understand how chart coordinates are calculated from values.
+
+## Example demo flow
+
+1. Open the app
+2. Click `Load demo dataset`
+3. Ask:
+   - `Summarize this dataset`
+   - `What is the average revenue?`
+   - `Show total revenue by region`
+
+## Future improvements
+
+- connect a real LLM API for deeper natural-language understanding
+- support larger CSVs with pagination or worker-based parsing
+- add filters and sorting for the preview table
+- add downloadable summaries or chart exports
+- support follow-up questions with conversational memory
+
+## Why this is a good portfolio project
+
+This repo shows more than just UI work. It demonstrates:
+
+- frontend state management
+- data parsing and transformation
+- user-driven file workflows
+- analytics-style interface design
+- explainable tool-based reasoning
+
+That makes it a strong project for frontend, product engineering, or AI-adjacent internships and roles.

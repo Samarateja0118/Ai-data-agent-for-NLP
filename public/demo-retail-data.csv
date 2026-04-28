@@ -1,0 +1,12 @@
+Month,Region,Channel,Revenue,Orders,ConversionRate,ReturningCustomers
+January,North America,Search,84200,1204,3.8%,31%
+February,North America,Email,89600,1288,4.0%,32%
+March,Europe,Social,93400,1362,4.1%,33%
+April,Europe,Search,101800,1481,4.3%,34%
+May,Asia Pacific,Display,108500,1556,4.4%,35%
+June,Asia Pacific,Email,112900,1612,4.5%,36%
+July,North America,Search,118400,1704,4.6%,36%
+August,Europe,Social,122600,1768,4.7%,37%
+September,Latin America,Display,119300,1721,4.5%,37%
+October,Asia Pacific,Search,124900,1792,4.7%,38%
+November,North America,Email,128400,1842,4.8%,38%

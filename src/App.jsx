@@ -193,19 +193,12 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, toolFeed]);
 
-  async function handleFileChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+  async function loadDataset(fileName, text) {
     setIsImporting(true);
     setUploadError('');
 
     try {
-      const text = await file.text();
-      const nextDataset = buildDatasetFromCsv(file.name, text);
+      const nextDataset = buildDatasetFromCsv(fileName, text);
 
       setDataset(nextDataset);
       setSelectedNumericColumn(nextDataset.numericColumns[0]?.name ?? '');
@@ -213,7 +206,7 @@ export default function App() {
       setToolFeed([
         {
           type: 'file.read',
-          label: `Read file: ${file.name}`,
+          label: `Read file: ${fileName}`,
           detail: `Loaded ${text.length.toLocaleString()} characters from the uploaded CSV.`
         },
         {
@@ -238,8 +231,25 @@ export default function App() {
       setUploadError(error.message || 'Could not parse that CSV file.');
     } finally {
       setIsImporting(false);
-      event.target.value = '';
     }
+  }
+
+  async function handleFileChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const text = await file.text();
+    await loadDataset(file.name, text);
+    event.target.value = '';
+  }
+
+  async function handleLoadDemoDataset() {
+    const response = await fetch('/demo-retail-data.csv');
+    const text = await response.text();
+    await loadDataset('demo-retail-data.csv', text);
   }
 
   async function handleSubmit(event, nextQuestion) {
@@ -332,6 +342,15 @@ export default function App() {
                 : 'Your file stays in the browser and is profiled locally.'}
             </small>
           </label>
+
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={handleLoadDemoDataset}
+            disabled={isImporting}
+          >
+            Load demo dataset
+          </button>
 
           {uploadError ? <p className="upload-error">{uploadError}</p> : null}
         </article>
