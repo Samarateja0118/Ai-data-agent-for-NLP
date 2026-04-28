@@ -137,3 +137,4 @@ This repo shows more than just UI work. It demonstrates:
 - explainable tool-based reasoning
 
 That makes it a strong project for frontend, product engineering, or AI-adjacent internships and roles.
+by samarateja
