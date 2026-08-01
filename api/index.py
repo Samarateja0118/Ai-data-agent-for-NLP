@@ -1,4 +1,11 @@
 import os
+import sys
+from pathlib import Path
+
+# Vercel's Python runtime loads this file via importlib without adding its own
+# directory to sys.path, so the sibling-module imports below need it added explicitly
+# (this is a no-op locally, where uvicorn already runs with cwd=api/).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
