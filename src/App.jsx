@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { buildStarterPrompts, runAnalystQuery } from './lib/analysisEngine';
+import { buildStarterPrompts } from './lib/analysisEngine';
 import { buildDatasetFromCsv, parseNumericValue } from './lib/csvUtils';
+import { queryDataset, registerDataset } from './lib/queryClient';
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -160,6 +161,8 @@ function getUploadMessage(dataset) {
 
 export default function App() {
   const [dataset, setDataset] = useState(null);
+  const [datasetId, setDatasetId] = useState(null);
+  const [backendError, setBackendError] = useState('');
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [toolFeed, setToolFeed] = useState([]);
@@ -196,6 +199,8 @@ export default function App() {
   async function loadDataset(fileName, text) {
     setIsImporting(true);
     setUploadError('');
+    setBackendError('');
+    setDatasetId(null);
 
     try {
       const nextDataset = buildDatasetFromCsv(fileName, text);
@@ -203,6 +208,16 @@ export default function App() {
       setDataset(nextDataset);
       setSelectedNumericColumn(nextDataset.numericColumns[0]?.name ?? '');
       setSelectedCategoryColumn(nextDataset.categoricalColumns[0]?.name ?? '');
+
+      try {
+        const registration = await registerDataset(fileName, text);
+        setDatasetId(registration.datasetId);
+      } catch (backendErr) {
+        setBackendError(
+          `AI query backend unavailable (${backendErr.message}). The dashboard above still works, but chat questions need python-service running with a valid OPENAI_API_KEY.`
+        );
+      }
+
       setToolFeed([
         {
           type: 'file.read',
@@ -261,6 +276,24 @@ export default function App() {
       return;
     }
 
+    if (!datasetId) {
+      setMessages((current) => [
+        ...current,
+        { id: Date.now(), role: 'user', content: question },
+        {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content:
+            backendError ||
+            'No dataset is registered with the AI backend yet. Upload a CSV first, or check that python-service is running.'
+        }
+      ]);
+      setInput('');
+      return;
+    }
+
+    const history = messages.slice(-6).map(({ role, content }) => ({ role, content }));
+
     setMessages((current) => [
       ...current,
       {
@@ -273,29 +306,45 @@ export default function App() {
     setToolFeed([]);
     setIsRunning(true);
 
-    const result = await runAnalystQuery(question, dataset);
+    try {
+      const result = await queryDataset({ datasetId, question, history });
 
-    result.toolEvents.forEach((toolEvent) => {
-      setToolFeed((current) => [...current, toolEvent]);
-    });
+      result.toolEvents.forEach((toolEvent) => {
+        setToolFeed((current) => [...current, toolEvent]);
+      });
 
-    if (result.focus?.chartColumn) {
-      setSelectedNumericColumn(result.focus.chartColumn);
-    }
-
-    if (result.focus?.categoryColumn) {
-      setSelectedCategoryColumn(result.focus.categoryColumn);
-    }
-
-    setMessages((current) => [
-      ...current,
-      {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: result.response
+      if (result.focus?.chartColumn) {
+        setSelectedNumericColumn(result.focus.chartColumn);
       }
-    ]);
-    setIsRunning(false);
+
+      if (result.focus?.categoryColumn) {
+        setSelectedCategoryColumn(result.focus.categoryColumn);
+      }
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: result.response
+        }
+      ]);
+    } catch (error) {
+      setToolFeed((current) => [
+        ...current,
+        { type: 'error', label: 'AI backend request failed', detail: error.message }
+      ]);
+      setMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: `Couldn't reach the AI backend (${error.message}). Make sure python-service is running with a valid OPENAI_API_KEY.`
+        }
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
   }
 
   return (
@@ -305,12 +354,14 @@ export default function App() {
 
       <header className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">React + JavaScript + CSV Analysis</p>
+          <p className="eyebrow">React + LLM + Pandas Query Engine</p>
           <h1>Ask Questions About Any CSV</h1>
           <p className="hero-text">
             Upload a dataset, inspect the schema, and ask analyst-style questions
-            against the file you loaded. This version is generic, so the app adapts
-            to your columns instead of being tied to one demo dataset.
+            against the file you loaded. An OpenAI-powered planner turns your question
+            into a structured query, validated against the real schema and executed
+            with pandas — no rows ever leave your machine except the schema summary
+            sent to the model.
           </p>
         </div>
 
@@ -553,6 +604,8 @@ export default function App() {
               {isRunning ? 'Analyzing...' : 'Ready'}
             </span>
           </div>
+
+          {backendError ? <p className="upload-error">{backendError}</p> : null}
 
           <div className="prompt-row">
             {starterPrompts.map((prompt) => (

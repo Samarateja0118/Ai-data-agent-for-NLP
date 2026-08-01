@@ -4,3 +4,6 @@ dist/
 .env
 .env.*
 npm-debug.log*
+python-service/__pycache__/
+python-service/.venv/
+python-service/venv/
