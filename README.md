@@ -96,10 +96,16 @@ The whole app deploys as a single Vercel project — no separate backend host, n
    Vercel auto-detects the Vite frontend at the root and, separately, treats `api/index.py`
    as a Python serverless function — both ship from one deployment, same origin, so
    `VITE_API_BASE_URL` can stay unset in production (the client falls back to relative
-   `/api/*` requests).
+   `/api/*` requests). `vercel.json` rewrites every `/api/*` request to that one function —
+   without it, Vercel's filesystem routing only maps `api/index.py` to the literal path
+   `/api`, and FastAPI's own internal routes (`/api/health`, `/api/dataset`, `/api/query`)
+   would all 404.
 2. Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in the project's Environment
    Variables.
-3. Deploy. Check `/api/health` on the deployed URL, then try the demo dataset.
+3. Under Settings → Deployment Protection, make sure Production isn't gated behind
+   Vercel SSO — otherwise visitors without a Vercel login hit a sign-in wall instead of
+   the demo.
+4. Deploy. Check `/api/health` on the deployed URL, then try the demo dataset.
 
 This is the same pattern the `movie-mcp-server` project in this portfolio uses for its
 FastAPI backend, and it's why the API had to be made stateless first: Vercel Python
