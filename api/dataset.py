@@ -1,11 +1,7 @@
 import io
 import re
-import uuid
 
 import pandas as pd
-
-DATASETS: dict[str, pd.DataFrame] = {}
-DATASET_META: dict[str, dict] = {}
 
 _PERCENT_RE = re.compile(r"%")
 _CURRENCY_RE = re.compile(r"[$€£¥]")
@@ -142,7 +138,14 @@ def profile_schema(name: str, df: pd.DataFrame) -> dict:
     }
 
 
-def register_dataset(name: str, csv_text: str) -> tuple[str, dict]:
+def profile_from_csv(name: str, csv_text: str) -> tuple[pd.DataFrame, dict]:
+    """Parse and profile a CSV in one shot — no server-side state.
+
+    Each request carries the CSV text itself rather than a server-cached id, so the
+    API stays stateless and safe to run as disposable serverless function instances
+    (no instance-affinity requirement between the "upload" and "ask a question" steps).
+    """
+
     if len(csv_text.encode("utf-8")) > 8 * 1024 * 1024:
         raise ValueError("CSV file is too large (max 8MB).")
 
@@ -150,14 +153,5 @@ def register_dataset(name: str, csv_text: str) -> tuple[str, dict]:
     if df.shape[0] < 1 or df.shape[1] < 1:
         raise ValueError("The CSV needs a header row and at least one data row.")
 
-    dataset_id = str(uuid.uuid4())
     schema = profile_schema(name, df)
-    DATASETS[dataset_id] = df
-    DATASET_META[dataset_id] = schema
-    return dataset_id, schema
-
-
-def get_dataset(dataset_id: str) -> tuple[pd.DataFrame, dict]:
-    if dataset_id not in DATASETS:
-        raise KeyError(dataset_id)
-    return DATASETS[dataset_id], DATASET_META[dataset_id]
+    return df, schema

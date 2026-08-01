@@ -3,7 +3,9 @@ dist/
 .DS_Store
 .env
 .env.*
+!.env.example
+!*/.env.example
 npm-debug.log*
-python-service/__pycache__/
-python-service/.venv/
-python-service/venv/
+api/__pycache__/
+api/.venv/
+api/venv/

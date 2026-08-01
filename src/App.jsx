@@ -161,7 +161,7 @@ function getUploadMessage(dataset) {
 
 export default function App() {
   const [dataset, setDataset] = useState(null);
-  const [datasetId, setDatasetId] = useState(null);
+  const [csvText, setCsvText] = useState(null);
   const [backendError, setBackendError] = useState('');
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -200,21 +200,21 @@ export default function App() {
     setIsImporting(true);
     setUploadError('');
     setBackendError('');
-    setDatasetId(null);
+    setCsvText(null);
 
     try {
       const nextDataset = buildDatasetFromCsv(fileName, text);
 
       setDataset(nextDataset);
+      setCsvText(text);
       setSelectedNumericColumn(nextDataset.numericColumns[0]?.name ?? '');
       setSelectedCategoryColumn(nextDataset.categoricalColumns[0]?.name ?? '');
 
       try {
-        const registration = await registerDataset(fileName, text);
-        setDatasetId(registration.datasetId);
+        await registerDataset(fileName, text);
       } catch (backendErr) {
         setBackendError(
-          `AI query backend unavailable (${backendErr.message}). The dashboard above still works, but chat questions need python-service running with a valid OPENAI_API_KEY.`
+          `AI query backend unavailable (${backendErr.message}). The dashboard above still works, but chat questions need the backend running with a valid OPENAI_API_KEY.`
         );
       }
 
@@ -276,16 +276,14 @@ export default function App() {
       return;
     }
 
-    if (!datasetId) {
+    if (!csvText || !dataset) {
       setMessages((current) => [
         ...current,
         { id: Date.now(), role: 'user', content: question },
         {
           id: Date.now() + 1,
           role: 'assistant',
-          content:
-            backendError ||
-            'No dataset is registered with the AI backend yet. Upload a CSV first, or check that python-service is running.'
+          content: backendError || 'Upload a CSV first, then I can answer questions about it.'
         }
       ]);
       setInput('');
@@ -307,7 +305,7 @@ export default function App() {
     setIsRunning(true);
 
     try {
-      const result = await queryDataset({ datasetId, question, history });
+      const result = await queryDataset({ name: dataset.name, csvText, question, history });
 
       result.toolEvents.forEach((toolEvent) => {
         setToolFeed((current) => [...current, toolEvent]);
@@ -339,7 +337,7 @@ export default function App() {
         {
           id: Date.now() + 1,
           role: 'assistant',
-          content: `Couldn't reach the AI backend (${error.message}). Make sure python-service is running with a valid OPENAI_API_KEY.`
+          content: `Couldn't reach the AI backend (${error.message}). Make sure the backend is running with a valid OPENAI_API_KEY.`
         }
       ]);
     } finally {

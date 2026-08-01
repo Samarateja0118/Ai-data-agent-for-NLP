@@ -55,14 +55,14 @@ class DatasetUploadRequest(BaseModel):
 
 
 class DatasetUploadResponse(BaseModel):
-    datasetId: str
     schema_: dict = Field(alias="schema")
 
     model_config = {"populate_by_name": True}
 
 
 class QueryRequest(BaseModel):
-    datasetId: str
+    name: str
+    csvText: str
     question: str
     history: list[ChatTurn] = Field(default_factory=list)
 

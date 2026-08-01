@@ -32,19 +32,19 @@ def health():
 @app.post("/api/dataset", response_model=DatasetUploadResponse)
 def upload_dataset(payload: DatasetUploadRequest):
     try:
-        dataset_id, schema = dataset.register_dataset(payload.name, payload.csvText)
+        _df, schema = dataset.profile_from_csv(payload.name, payload.csvText)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    return {"datasetId": dataset_id, "schema": schema}
+    return {"schema": schema}
 
 
 @app.post("/api/query", response_model=QueryResponse)
 def run_query(payload: QueryRequest):
     try:
-        df, schema = dataset.get_dataset(payload.datasetId)
-    except KeyError:
-        raise HTTPException(status_code=404, detail="Unknown datasetId — upload the CSV again.") from None
+        df, schema = dataset.profile_from_csv(payload.name, payload.csvText)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
     history = [turn.model_dump() for turn in payload.history]
 

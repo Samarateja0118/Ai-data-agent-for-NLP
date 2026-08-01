@@ -30,6 +30,12 @@ summary stats. That keeps the prompt small regardless of dataset size and is the
 context, not the dataset itself. Conversation history (last 3 turns) is included so
 follow-ups like *"now break that down by channel"* resolve without repeating the metric.
 
+The API is stateless: every `/api/query` request carries the CSV text itself and
+re-profiles it with pandas, rather than caching a parsed DataFrame server-side by id.
+That costs a re-parse per question (sub-millisecond at this dataset size), but means
+any request can land on any server instance with no shared state required — which is
+what makes it safe to run as disposable serverless functions on Vercel.
+
 ## What it does
 
 After uploading a CSV, the app can:
@@ -67,19 +73,38 @@ npm install
 npm run dev
 
 # backend (separate terminal)
-cd python-service
+cd api
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill in OPENAI_API_KEY
-uvicorn main:app --reload --port 8000
+uvicorn index:app --reload --port 8000
 ```
 
-The frontend reads `VITE_API_BASE_URL` (defaults to `http://localhost:8000`, see `.env.example`).
+The frontend reads `VITE_API_BASE_URL` (see `.env.example`) — only needed locally, where
+the Vite dev server and the API run as separate processes on different origins.
 
-There is no rule-based fallback: if `python-service` isn't running or the API key isn't
+There is no rule-based fallback: if the backend isn't running or the API key isn't
 configured, the chat surfaces an honest error instead of silently answering with a
 weaker engine. The dashboard panels (metrics, trend chart, category breakdown, preview
 table) are all computed client-side and keep working regardless.
+
+## Deploying
+
+The whole app deploys as a single Vercel project — no separate backend host, no CORS:
+
+1. Import this repo on [vercel.com](https://vercel.com) (New Project → this GitHub repo).
+   Vercel auto-detects the Vite frontend at the root and, separately, treats `api/index.py`
+   as a Python serverless function — both ship from one deployment, same origin, so
+   `VITE_API_BASE_URL` can stay unset in production (the client falls back to relative
+   `/api/*` requests).
+2. Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in the project's Environment
+   Variables.
+3. Deploy. Check `/api/health` on the deployed URL, then try the demo dataset.
+
+This is the same pattern the `movie-mcp-server` project in this portfolio uses for its
+FastAPI backend, and it's why the API had to be made stateless first: Vercel Python
+functions are disposable per-invocation, so a server-side cache keyed by an id from a
+previous request isn't guaranteed to be there on the next one.
 
 ## Evaluating the pipeline
 
@@ -87,11 +112,11 @@ table) are all computed client-side and keep working regardless.
 npm run benchmark
 ```
 
-Runs 12 known questions plus one multi-turn follow-up against a live `python-service`
-instance and checks both "well-formed" (right operation, non-empty response) and
-"logically correct" (right numeric value, within tolerance, since pandas floats may
-round slightly differently than exact string matches). Requires the backend to be
-running first.
+Runs 12 known questions plus one multi-turn follow-up against a live backend and checks
+both "well-formed" (right operation, non-empty response) and "logically correct" (right
+numeric value, within tolerance, since pandas floats may round slightly differently than
+exact string matches). Requires the backend to be running first — set `API_BASE_URL` to
+point at it if it's not on `http://localhost:8000`.
 
 ## Guardrails
 
@@ -117,9 +142,9 @@ src/
     analysisEngine.js         Starter-prompt suggestions
     queryClient.js             Fetch wrappers for /api/dataset and /api/query
 
-python-service/
-  main.py                     FastAPI app, in-memory dataset cache, the two routes
-  dataset.py                   CSV loading + schema profiling (pandas)
+api/
+  index.py                    FastAPI app + entrypoint Vercel's Python runtime detects
+  dataset.py                   CSV loading + schema profiling (pandas), stateless
   llm.py                       Prompt construction + OpenAI call
   guardrails.py                Schema/type validation + retry logic
   execute.py                   Pandas execution per operation, response formatting
@@ -131,9 +156,8 @@ scripts/
 
 ## Known limitations (intentional, for a portfolio-scoped demo)
 
-- Datasets are cached in-memory in the Python process — they don't survive a restart.
-  A production version would use Redis or a similar store.
-- No auth, no persistence, no deployment config — this repo is meant to be run locally.
+- No auth, no persistence — every request re-parses the CSV it's given rather than
+  reading from a database.
 - Retrieval is schema-based rather than embedding/vector search, which is the right
   scale for structured tabular data — a vector DB would be solving a problem this
   dataset shape doesn't have.

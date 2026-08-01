@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 async function parseErrorMessage(response) {
   try {
@@ -23,11 +23,11 @@ export async function registerDataset(name, csvText) {
   return response.json();
 }
 
-export async function queryDataset({ datasetId, question, history }) {
+export async function queryDataset({ name, csvText, question, history }) {
   const response = await fetch(`${API_BASE_URL}/api/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ datasetId, question, history })
+    body: JSON.stringify({ name, csvText, question, history })
   });
 
   if (!response.ok) {

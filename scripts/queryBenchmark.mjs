@@ -116,11 +116,11 @@ function isWellFormed(result, expectedLastEvent) {
   return result.toolEvents[result.toolEvents.length - 1]?.type === expectedLastEvent;
 }
 
+const datasetName = 'demo-retail-data.csv';
+
 async function main() {
-  const { datasetId } = await post('/api/dataset', {
-    name: 'demo-retail-data.csv',
-    csvText
-  });
+  const { schema } = await post('/api/dataset', { name: datasetName, csvText });
+  console.log(`Dataset validated: ${schema.rowCount} rows, ${schema.columnCount} columns`);
 
   const failures = [];
   let wellFormedCount = 0;
@@ -130,7 +130,7 @@ async function main() {
     let result;
 
     try {
-      result = await post('/api/query', { datasetId, question: testCase.query, history: [] });
+      result = await post('/api/query', { name: datasetName, csvText, question: testCase.query, history: [] });
     } catch (error) {
       failures.push({ query: testCase.query, wellFormed: false, logicCorrect: false, response: error.message, events: [] });
       continue;
@@ -155,12 +155,14 @@ async function main() {
 
   // Multi-turn follow-up: relies on conversation history to resolve "that" and "it".
   const first = await post('/api/query', {
-    datasetId,
+    name: datasetName,
+    csvText,
     question: 'What is the average revenue?',
     history: []
   });
   const followUp = await post('/api/query', {
-    datasetId,
+    name: datasetName,
+    csvText,
     question: 'Now break that down by channel',
     history: [
       { role: 'user', content: 'What is the average revenue?' },
