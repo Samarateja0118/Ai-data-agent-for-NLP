@@ -1,5 +1,7 @@
 # CSV Analyst Chat
 
+[![Live demo](https://img.shields.io/badge/live-demo-ff7a59)](https://ai-data-agent-for-nlp.vercel.app)
+
 A React frontend + Python (FastAPI/pandas) backend that lets you upload a CSV and ask
 analyst-style questions about it in plain English. An OpenAI-powered planner turns each
 question into a structured query — not raw code, not free-text guessing — which is
